@@ -127,6 +127,7 @@ class AgentLoop:
         return HarmonyRequest(system=system, developer=developer, user=user)
 
     def run_next(self, mode: Optional[str] = None) -> Path | None:
+        self.initialize()
         task = self.next_task()
         if task is None:
             return None

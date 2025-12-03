@@ -55,6 +55,7 @@ def handle_record_iteration(agent: AgentLoop, mode: str) -> None:
 
 
 def handle_step(agent: AgentLoop, mode: str) -> None:
+    agent.initialize()
     agent.model_client = HarmonyClient()
     path = agent.run_next(mode=mode)
     if path:

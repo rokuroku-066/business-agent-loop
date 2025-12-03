@@ -57,3 +57,42 @@ def test_process_next_task_updates_task_and_records_iteration(tmp_path: Path) ->
     assert iteration is not None
     data = json.loads(iteration.read_text(encoding="utf-8"))
     assert data["mode"] == "explore"
+
+
+def test_run_next_initializes_layout_and_bootstraps_tasks(tmp_path: Path) -> None:
+    response_payload = {
+        "ideas": [
+            {
+                "id": "idea-1",
+                "title": "Test idea",
+                "summary": "Initial summary",
+                "target_audience": "operators",
+                "value_proposition": "value",
+                "revenue_model": "subscription",
+                "brand_fit_score": 0.8,
+                "novelty_score": 0.7,
+                "feasibility_score": 0.6,
+                "status": "draft",
+                "tags": ["demo"],
+            }
+        ],
+        "follow_up_tasks": [],
+        "summary": "Ran exploration",
+    }
+    client = FakeHarmonyClient(response_payload)
+    agent = build_agent(tmp_path)
+    agent.model_client = client
+
+    iteration_path = agent.run_next(mode="explore")
+
+    assert iteration_path is not None
+    assert iteration_path.exists()
+
+    tasks = agent.state_store.load_tasks()
+    assert tasks and tasks[0].status == "done"
+
+    history = agent.state_store.load_idea_history()
+    assert history.get("idea-1") == ["Initial summary"]
+
+    ideas_log = (tmp_path / "ideas" / "ideas.jsonl").read_text(encoding="utf-8")
+    assert "Test idea" in ideas_log
