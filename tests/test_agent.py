@@ -8,11 +8,11 @@ from business_agent_loop.models import Task
 
 
 class FakeHarmonyClient:
-    def __init__(self, payload: dict) -> None:
+    def __init__(self, payload: object) -> None:
         self.payload = payload
         self.requests = []
 
-    def run(self, request: object) -> dict:
+    def run(self, request: object) -> object:
         self.requests.append(request)
         return self.payload
 
@@ -73,6 +73,30 @@ def test_prompt_construction_for_planner(tmp_path: Path) -> None:
     assert "seed" in request.user
 
 
+def test_prompts_require_json_for_critic_and_editor(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path)
+    critic_task = Task(
+        id="critic-1",
+        type="critic",
+        priority=5,
+        related_idea_ids=[],
+        status="ready",
+    )
+    editor_task = Task(
+        id="edit-1",
+        type="edit",
+        priority=5,
+        related_idea_ids=["idea-1"],
+        status="ready",
+    )
+
+    critic_prompt = agent.render_prompt(critic_task)
+    editor_prompt = agent.render_prompt(editor_task)
+
+    assert "Return JSON" in critic_prompt.user
+    assert "Return JSON" in editor_prompt.user
+
+
 def test_run_next_updates_tasks_and_persists_ideas(tmp_path: Path) -> None:
     payload = {
         "ideas": [
@@ -125,6 +149,30 @@ def test_run_next_updates_tasks_and_persists_ideas(tmp_path: Path) -> None:
     idea_file = tmp_path / "ideas" / "ideas.jsonl"
     content = idea_file.read_text(encoding="utf-8")
     assert "idea-1" in content
+
+
+def test_run_next_handles_plain_text_response(tmp_path: Path) -> None:
+    client = FakeHarmonyClient("finished")
+    agent = build_agent(tmp_path, model_client=client)
+    agent.state_store.ensure_layout()
+    agent.state_store.save_tasks(
+        [
+            Task(
+                id="critic-1",
+                type="critic",
+                priority=1,
+                related_idea_ids=[],
+                status="ready",
+            )
+        ]
+    )
+
+    path = agent.run_next()
+    assert path is not None and path.exists()
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["task_summary"] == "finished"
+    tasks = agent.state_store.load_tasks()
+    assert any(task.id == "critic-1" and task.status == "done" for task in tasks)
 
 
 def test_iteration_logging_includes_prompt_and_response(tmp_path: Path) -> None:

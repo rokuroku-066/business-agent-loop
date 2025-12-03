@@ -106,7 +106,7 @@ class AgentLoop:
         iteration = IterationLog(
             iteration_id=task.id,
             mode=task.type,
-            task_summary=summary or task.meta.get("note", "") if task.meta else "",
+            task_summary=summary or (task.meta.get("note", "") if task.meta else ""),
             details={
                 "role": self._role_for_task(task.type),
                 "prompt": prompt.__dict__,
@@ -139,24 +139,31 @@ class AgentLoop:
             )
         elif role == "critic":
             base.append(
-                "Review existing ideas and suggest improvements. Include follow_up_tasks"
-                " if more work is needed."
+                "Review existing ideas and suggest improvements. Return JSON with"
+                " keys: ideas (optional list of revisions), follow_up_tasks (list),"
+                " summary."
             )
         elif role == "editor":
-            base.append("Polish selected ideas and mark readiness.")
+            base.append(
+                "Polish selected ideas and mark readiness. Return JSON with keys:"
+                " ideas (list), follow_up_tasks (optional list), summary."
+            )
         if task.meta:
             base.append(f"Task note: {json.dumps(task.meta)}")
         base.append(f"Related ideas: {related}")
         return "\n".join(base)
 
     def _parse_model_response(
-        self, response: Dict[str, object]
+        self, response: object
     ) -> tuple[list[IdeaRecord], list[Task], str]:
+        if not isinstance(response, Dict):
+            return [], [], str(response)
+
         ideas = [self._idea_from_payload(payload) for payload in response.get("ideas", [])]
         follow_up_tasks = [
             self._task_from_payload(payload) for payload in response.get("follow_up_tasks", [])
         ]
-        summary = response.get("summary", "") if isinstance(response, Dict) else ""
+        summary = response.get("summary", "")
         return ideas, follow_up_tasks, str(summary)
 
     def _task_from_payload(self, payload: Dict[str, object]) -> Task:
