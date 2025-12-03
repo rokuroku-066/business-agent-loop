@@ -12,8 +12,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--base-dir",
         type=Path,
-        default=Path.cwd(),
-        help="Root directory for state and storage",
+        default=Path.cwd() / "runtime",
+        help="Root directory for runtime state and storage (default: ./runtime)",
     )
     parser.add_argument(
         "--config-dir",
