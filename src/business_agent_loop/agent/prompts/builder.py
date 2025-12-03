@@ -41,8 +41,8 @@ class PromptBuilder:
     def _system_prompt(self) -> str:
         ip = self.context.ip_profile
         return (
-            f"You are {ip.ip_name}, {ip.essence}. "
-            f"Brand promise: {ip.brand_promise}. Avoid: {', '.join(ip.taboos)}."
+            f"あなたは{ip.ip_name}であり、{ip.essence}です。 "
+            f"ブランドプロミス: {ip.brand_promise}。避けるべきこと: {', '.join(ip.taboos)}。"
         )
 
     def _developer_prompt(self, role: str) -> str:
@@ -51,21 +51,21 @@ class PromptBuilder:
         constraints = ", ".join(f"{k}: {v}" for k, v in project.constraints.items())
         templates = " | ".join(project.idea_templates)
         developer_lines = [
-            "# IP Spec",
-            f"Name: {ip.ip_name}",
-            f"Essence: {ip.essence}",
-            f"Personality: {', '.join(ip.core_personality)}",
-            f"Visual motifs: {', '.join(ip.visual_motifs)}",
-            f"Taboos: {', '.join(ip.taboos)}",
-            "# Project Config",
-            f"Project: {project.project_name}",
-            f"Goal: {project.goal_type}",
-            f"Target audience: {ip.target_audience}",
-            f"Constraints: {constraints}",
-            f"Idea templates: {templates}",
-            f"Iteration policy: {json.dumps(project.iteration_policy)}",
-            "# Role",
-            f"You are acting as the {role} role for this iteration.",
+            "# IP仕様",
+            f"名前: {ip.ip_name}",
+            f"本質: {ip.essence}",
+            f"人格: {', '.join(ip.core_personality)}",
+            f"ビジュアルモチーフ: {', '.join(ip.visual_motifs)}",
+            f"タブー: {', '.join(ip.taboos)}",
+            "# プロジェクト設定",
+            f"プロジェクト: {project.project_name}",
+            f"目標: {project.goal_type}",
+            f"ターゲット: {ip.target_audience}",
+            f"制約: {constraints}",
+            f"アイデアテンプレート: {templates}",
+            f"イテレーションポリシー: {json.dumps(project.iteration_policy)}",
+            "# 役割",
+            f"このイテレーションでは{role}として行動してください。",
         ]
         return "\n".join(developer_lines)
 
@@ -76,10 +76,10 @@ class PromptBuilder:
         related_ideas: Iterable[IdeaRecord],
         recent_summaries: list[str] | None,
     ) -> str:
-        related = ", ".join(task.related_idea_ids) if task.related_idea_ids else "none"
-        base = [f"You are acting as the {role} for this iteration."]
+        related = ", ".join(task.related_idea_ids) if task.related_idea_ids else "なし"
+        base = [f"このイテレーションでは{role}として行動してください。"]
         if related_ideas:
-            base.append("## Related ideas")
+            base.append("## 関連アイデア")
             for idea in related_ideas:
                 base.append(
                     " - "
@@ -100,37 +100,38 @@ class PromptBuilder:
                 )
         if task.type == "shake_up_idea":
             base.append(
-                "Shake up the idea. Return JSON with keys: ideas (at least 2 divergent directions), "
-                "follow_up_tasks, summary."
+                "アイデアを揺さぶってください。JSONで返却し、キーは ideas（少なくとも2つの方向性）、"
+                "follow_up_tasks、summary としてください。"
             )
             if recent_summaries:
-                base.append("Recent summaries to avoid repeating:")
+                base.append("重複を避けるための最近のサマリー:")
                 for entry in recent_summaries[-3:]:
                     base.append(f" - {entry}")
-            base.append("Ensure new directions differ clearly from the recent updates.")
+            base.append("新しい方向性が最近の更新と明確に異なるようにしてください。")
         elif role == "planner":
             base.append(
-                "Propose follow-up tasks to progress the project. Return JSON with"
-                " keys: follow_up_tasks (list), summary."
+                "プロジェクトを前進させるフォローアップタスクを提案してください。"
+                " JSONで返却し、キーは follow_up_tasks（リスト）、summary としてください。"
             )
         elif role == "ideator":
             base.append(
-                "Generate business ideas following the provided templates."
-                " Return JSON with keys: ideas (list of idea records),"
-                " follow_up_tasks, summary."
+                "提供されたテンプレートに沿ってビジネスアイデアを生成してください。"
+                " JSONで返却し、キーは ideas（アイデア記録のリスト）、"
+                " follow_up_tasks、summary としてください。"
             )
         elif role == "critic":
             base.append(
-                "Review existing ideas and suggest improvements. Return JSON with"
-                " keys: ideas (optional list of revisions), follow_up_tasks (list),"
-                " summary."
+                "既存のアイデアをレビューし、改善点を提案してください。"
+                " JSONで返却し、キーは ideas（改訂案のリスト。任意）、"
+                " follow_up_tasks（リスト）、summary としてください。"
             )
         elif role == "editor":
             base.append(
-                "Polish selected ideas and mark readiness. Return JSON with keys:"
-                " ideas (list), follow_up_tasks (optional list), summary."
+                "選択されたアイデアを磨き上げ、準備完了かを示してください。"
+                " JSONで返却し、キーは ideas（リスト）、follow_up_tasks（任意のリスト）、"
+                "summary としてください。"
             )
         if task.meta:
-            base.append(f"Task note: {json.dumps(task.meta)}")
-        base.append(f"Related ideas: {related}")
+            base.append(f"タスクの補足: {json.dumps(task.meta)}")
+        base.append(f"関連アイデア: {related}")
         return "\n".join(base)
