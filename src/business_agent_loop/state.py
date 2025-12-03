@@ -19,6 +19,7 @@ class StateStore:
         self.state_dir = base_dir / "state"
         self.tasks_file = self.state_dir / "tasks.json"
         self.iteration_state_file = self.state_dir / "iteration_state.json"
+        self.idea_history_file = self.state_dir / "idea_history.json"
 
     def ensure_layout(self) -> None:
         for directory in [
@@ -33,6 +34,8 @@ class StateStore:
             self.tasks_file.write_text("[]", encoding="utf-8")
         if not self.iteration_state_file.exists():
             self.iteration_state_file.write_text("{}", encoding="utf-8")
+        if not self.idea_history_file.exists():
+            self.idea_history_file.write_text("{}", encoding="utf-8")
 
     # Task management
     def load_tasks(self) -> list[Task]:
@@ -53,6 +56,43 @@ class StateStore:
         with idea_file.open("a", encoding="utf-8") as file:
             for idea in ideas:
                 file.write(json.dumps(idea.to_dict(), ensure_ascii=False) + "\n")
+
+    def load_ideas_by_ids(self, idea_ids: Iterable[str]) -> list[IdeaRecord]:
+        """Return only idea records matching the provided IDs."""
+
+        idea_file = self.ideas_dir / "ideas.jsonl"
+        if not idea_file.exists():
+            return []
+
+        wanted = set(idea_ids)
+        matches: list[IdeaRecord] = []
+        with idea_file.open("r", encoding="utf-8") as file:
+            for line in file:
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if payload.get("id") in wanted:
+                    matches.append(IdeaRecord.from_dict(payload))
+        return matches
+
+    def load_idea_history(self) -> dict[str, list[str]]:
+        if not self.idea_history_file.exists():
+            return {}
+        with self.idea_history_file.open("r", encoding="utf-8") as file:
+            try:
+                payload = json.load(file)
+            except json.JSONDecodeError:
+                return {}
+        return {key: list(value) for key, value in payload.items()}
+
+    def append_idea_history(self, idea_id: str, summary: str, max_entries: int = 5) -> None:
+        history = self.load_idea_history()
+        entries = history.get(idea_id, [])
+        entries.append(summary)
+        history[idea_id] = entries[-max_entries:]
+        with self.idea_history_file.open("w", encoding="utf-8") as file:
+            json.dump(history, file, ensure_ascii=False, indent=2)
 
     # Iteration logs
     def record_iteration(self, iteration: IterationLog) -> Path:

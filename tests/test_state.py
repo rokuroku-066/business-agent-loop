@@ -45,3 +45,50 @@ def test_state_store_round_trip(tmp_path: Path) -> None:
     path = store.record_iteration(iteration)
     assert path.exists()
     assert store.latest_iteration() == path
+
+
+def test_state_store_tracks_idea_history(tmp_path: Path) -> None:
+    store = StateStore(tmp_path)
+    store.ensure_layout()
+    store.append_idea_history("idea-1", "first summary")
+    store.append_idea_history("idea-1", "second summary")
+
+    history = store.load_idea_history()
+    assert history["idea-1"][-1] == "second summary"
+
+
+def test_load_ideas_by_ids_filters(tmp_path: Path) -> None:
+    store = StateStore(tmp_path)
+    store.ensure_layout()
+    idea_a = IdeaRecord(
+        id="idea-a",
+        title="First",
+        summary="Summary A",
+        target_audience="ops",
+        value_proposition="Value",
+        revenue_model="Subscription",
+        brand_fit_score=0.8,
+        novelty_score=0.7,
+        feasibility_score=0.9,
+        status="draft",
+        tags=["automation"],
+    )
+    idea_b = IdeaRecord(
+        id="idea-b",
+        title="Second",
+        summary="Summary B",
+        target_audience="ops",
+        value_proposition="Value",
+        revenue_model="Subscription",
+        brand_fit_score=0.8,
+        novelty_score=0.7,
+        feasibility_score=0.9,
+        status="draft",
+        tags=["automation"],
+    )
+    store.append_ideas([idea_a, idea_b])
+
+    matches = store.load_ideas_by_ids(["idea-b"])
+
+    assert len(matches) == 1
+    assert matches[0].id == "idea-b"

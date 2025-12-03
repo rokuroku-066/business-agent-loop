@@ -55,10 +55,10 @@ def handle_record_iteration(agent: AgentLoop, mode: str) -> None:
 
 
 def handle_step(agent: AgentLoop, mode: str) -> None:
-    client = HarmonyClient()
-    processed = agent.process_next_task(client, mode=mode)
-    if processed:
-        print("Processed next task via Harmony client")
+    agent.model_client = HarmonyClient()
+    path = agent.run_next(mode=mode)
+    if path:
+        print(f"Processed next task via Harmony client -> {path}")
     else:
         print("No ready tasks to process")
 
