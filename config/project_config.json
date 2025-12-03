@@ -1,0 +1,19 @@
+{
+  "project_name": "Service Blueprint Agent",
+  "goal_type": "Generate and refine service business blueprints",
+  "constraints": {
+    "budget": "Small-team prototype stage",
+    "legal": "Avoid regulated domains and medical advice",
+    "external_api": "No proprietary APIs during ideation"
+  },
+  "idea_templates": [
+    "One-liner, target audience, value proposition, revenue model",
+    "Differentiators, risks, success metrics"
+  ],
+  "iteration_policy": {
+    "token_limit": 4096,
+    "explore_ratio": 0.6,
+    "deepening_ratio": 0.4,
+    "stagnation_threshold": 0.9
+  }
+}
