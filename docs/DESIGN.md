@@ -45,10 +45,10 @@
 
 4. **状態＆ストレージ**
 
-   * `ideas/`：アイデア本体 + メタデータ
-   * `tasks/`：タスクキュー
-   * `iterations/`：各ループのログ
-   * `snapshots/`：定期スナップショット（人間レビュー用）
+   * `runtime/ideas/`：アイデア本体 + メタデータ
+   * `runtime/state/`：タスクキューやループカウンタ
+   * `runtime/iterations/`：各ループのログ
+   * `runtime/snapshots/`：定期スナップショット（人間レビュー用）
 
 5. **インタフェース＆運用**
 
@@ -231,7 +231,7 @@ Harmony では:
 
 4. **出力パース & 永続化**
 
-   * 新アイデアなら `ideas/` に追加
+   * 新アイデアなら `runtime/ideas/` に追加
    * 既存アイデアの更新なら差分計算し、 `change_log` に記録
 
 5. **停滞チェック**（後述）
@@ -248,20 +248,22 @@ Harmony では:
 
   * `ip_profile.json`（不変）
   * `project_config.json`
-* `state/`
+* `runtime/`
 
-  * `tasks.json`（タスクキュー）
-  * `iteration_state.json`（ループカウンタ・モードなど）
-* `ideas/`
+  * `state/`
 
-  * `ideas.jsonl`（1行1アイデア、ID付き）
-  * `ideas_index.json`（タグ一覧・スコア）
-* `iterations/`
+    * `tasks.json`（タスクキュー）
+    * `iteration_state.json`（ループカウンタ・モードなど）
+  * `ideas/`
 
-  * `YYYYMMDD_HHMM_iteration.json`（1ループ分の入出力ログ）
-* `snapshots/`
+    * `ideas.jsonl`（1行1アイデア、ID付き）
+    * `ideas_index.json`（タグ一覧・スコア）
+  * `iterations/`
 
-  * `YYYYMMDD_portfolio.md`（人間レビュー用まとめ）
+    * `YYYYMMDD_HHMM_iteration.json`（1ループ分の入出力ログ）
+  * `snapshots/`
+
+    * `YYYYMMDD_portfolio.md`（人間レビュー用まとめ）
 
 #### 6.2 アイデアのデータ構造（例）
 
