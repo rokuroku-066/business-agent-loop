@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
+from business_agent_loop.agent.policies.mode_selection import ModeSelector
 from business_agent_loop.config import IPProfile, ProjectConfig
 from business_agent_loop.models import IdeaRecord, Task
 
@@ -323,4 +324,6 @@ def test_mode_selection_balances_explore_and_deepen(tmp_path: Path) -> None:
         json.dumps({"explore": 5, "deepen": 0}), encoding="utf-8"
     )
 
-    assert agent._select_mode() == "deepen"
+    state = agent._load_iteration_state()
+    selector = ModeSelector()
+    assert selector.select_mode(state, agent.context.project_config.iteration_policy) == "deepen"

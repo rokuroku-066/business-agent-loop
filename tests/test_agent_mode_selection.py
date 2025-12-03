@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
+from business_agent_loop.agent.policies.mode_selection import ModeSelector
 from business_agent_loop.config import IPProfile, ProjectConfig
 
 
@@ -36,6 +37,7 @@ def build_agent(tmp_path: Path, *, explore_ratio: float, deepen_ratio: float) ->
 def test_select_mode_honors_iteration_policy_ratios(tmp_path: Path) -> None:
     agent = build_agent(tmp_path, explore_ratio=0.7, deepen_ratio=0.3)
     agent.state_store.ensure_layout()
+    selector = ModeSelector()
 
     scenarios = [
         ({"explore": 2, "deepen": 0}, "deepen"),
@@ -48,14 +50,19 @@ def test_select_mode_honors_iteration_policy_ratios(tmp_path: Path) -> None:
             json.dumps(iteration_state, ensure_ascii=False),
             encoding="utf-8",
         )
-        assert agent._select_mode() == expected_mode
+        state = agent._load_iteration_state()
+        assert (
+            selector.select_mode(state, agent.context.project_config.iteration_policy)
+            == expected_mode
+        )
 
 
 def test_corrupted_iteration_state_defaults_to_explore(tmp_path: Path) -> None:
     agent = build_agent(tmp_path, explore_ratio=0.6, deepen_ratio=0.4)
     agent.state_store.ensure_layout()
+    selector = ModeSelector()
 
     agent.state_store.iteration_state_file.write_text("{not: json", encoding="utf-8")
 
     assert agent._load_iteration_state() == {}
-    assert agent._select_mode() == "explore"
+    assert selector.select_mode({}, agent.context.project_config.iteration_policy) == "explore"
