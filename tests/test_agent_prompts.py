@@ -56,10 +56,10 @@ def test_prompts_include_related_idea_details(tmp_path: Path) -> None:
 
     prompt = agent.render_prompt(task)
 
-    assert "## Related ideas" in prompt.user
+    assert "## 関連アイデア" in prompt.user
     assert f'"id": "{idea.id}"' in prompt.user
     assert json.dumps(idea.title) in prompt.user
-    assert "Related ideas: idea-1" in prompt.user
+    assert "関連アイデア: idea-1" in prompt.user
 
 
 def test_shake_up_prompt_lists_recent_summaries(tmp_path: Path) -> None:
@@ -94,10 +94,10 @@ def test_shake_up_prompt_lists_recent_summaries(tmp_path: Path) -> None:
 
     prompt = agent.render_prompt(task)
 
-    assert "Shake up the idea. Return JSON with keys: ideas (at least 2 divergent directions), follow_up_tasks, summary." in prompt.user
-    assert "Recent summaries to avoid repeating:" in prompt.user
+    assert "アイデアを揺さぶってください。JSONで返却" in prompt.user
+    assert "重複を避けるための最近のサマリー:" in prompt.user
     assert "Second" in prompt.user
     assert "Third" in prompt.user
     assert "Fourth" in prompt.user
     assert "First" not in prompt.user
-    assert "Ensure new directions differ clearly from the recent updates." in prompt.user
+    assert "新しい方向性が最近の更新と明確に異なるようにしてください。" in prompt.user

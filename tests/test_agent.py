@@ -93,8 +93,8 @@ def test_prompts_require_json_for_critic_and_editor(tmp_path: Path) -> None:
     critic_prompt = agent.render_prompt(critic_task)
     editor_prompt = agent.render_prompt(editor_task)
 
-    assert "Return JSON" in critic_prompt.user
-    assert "Return JSON" in editor_prompt.user
+    assert "JSONで返却" in critic_prompt.user
+    assert "JSONで返却" in editor_prompt.user
 
 
 def test_run_next_updates_tasks_and_persists_ideas(tmp_path: Path) -> None:
