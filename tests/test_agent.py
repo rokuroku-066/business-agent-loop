@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
+from business_agent_loop.agent.policies.mode_selection import ModeSelector
 from business_agent_loop.config import IPProfile, ProjectConfig
 from business_agent_loop.models import IdeaRecord, Task
 
@@ -92,8 +93,8 @@ def test_prompts_require_json_for_critic_and_editor(tmp_path: Path) -> None:
     critic_prompt = agent.render_prompt(critic_task)
     editor_prompt = agent.render_prompt(editor_task)
 
-    assert "Return JSON" in critic_prompt.user
-    assert "Return JSON" in editor_prompt.user
+    assert "JSONで返却" in critic_prompt.user
+    assert "JSONで返却" in editor_prompt.user
 
 
 def test_run_next_updates_tasks_and_persists_ideas(tmp_path: Path) -> None:
@@ -323,4 +324,6 @@ def test_mode_selection_balances_explore_and_deepen(tmp_path: Path) -> None:
         json.dumps({"explore": 5, "deepen": 0}), encoding="utf-8"
     )
 
-    assert agent._select_mode() == "deepen"
+    state = agent._load_iteration_state()
+    selector = ModeSelector()
+    assert selector.select_mode(state, agent.context.project_config.iteration_policy) == "deepen"
