@@ -36,7 +36,7 @@ PY_EOF
 
 echo "  検出した Python バージョン: ${PYTHON_VERSION}"
 echo "  ※ vLLM の gpt-oss 対応版は主に Python 3.10 / 3.11 で検証されています。"
-echo "    3.12 だと vLLM の wheel が見つからないことがあるので要注意です。:contentReference[oaicite:2]{index=2}"
+echo "    3.12 だと vLLM の wheel がまだ提供されない場合があるので要注意です (https://wheels.vllm.ai/gpt-oss/ を確認してください)。"
 echo
 
 # ------------------------------
@@ -45,7 +45,7 @@ echo
 echo "[2/6] uv (高速 Python パッケージマネージャ) をインストールします..."
 
 if ! command -v uv >/dev/null 2>&1; then
-  # 公式推奨インストール方法:contentReference[oaicite:3]{index=3}
+  # 公式インストール手順: https://docs.astral.sh/uv/getting-started/installation/
   curl -LsSf https://astral.sh/uv/install.sh | sh
   # 典型的なパスを PATH に追加
   export PATH="$HOME/.local/bin:$PATH"
@@ -86,13 +86,13 @@ echo "[4/6] vLLM / Harmony / OpenAI SDK / gpt-oss ヘルパーをインストー
 uv pip install --upgrade pip
 
 # gpt-oss 対応版 vLLM をインストール
-# 公式 README の推奨手順に基づく:contentReference[oaicite:4]{index=4}
+# gpt-oss 公式 README の vLLM 手順に基づく: https://github.com/openai/gpt-oss#run-locally-with-vllm
 uv pip install --pre 'vllm==0.10.1+gptoss' \
   --extra-index-url https://wheels.vllm.ai/gpt-oss/ \
   --extra-index-url https://download.pytorch.org/whl/nightly/cu128 \
   --index-strategy unsafe-best-match
 
-# Harmony / OpenAI SDK / gpt-oss ヘルパーをインストール:contentReference[oaicite:5]{index=5}
+# Harmony / OpenAI SDK / gpt-oss ヘルパーをインストール (PyPI 公開パッケージ)
 uv pip install openai-harmony openai gpt-oss
 
 echo
@@ -162,13 +162,13 @@ PROJECT_DIR="${SCRIPT_DIR}/.."
 source "${PROJECT_DIR}/.venv/bin/activate"
 
 # 一部 GPU (特に Ampere 世代など) では Attention backend を明示すると安定することがあります。
-# 問題が出た場合は以下を有効化して試してください。:contentReference[oaicite:6]{index=6}
+# 問題が出た場合は以下を有効化して試してください (vLLM release notes で言及)。
 # export VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1
 
-# FlashInfer sampler 周りで問題がある場合の回避策。:contentReference[oaicite:7]{index=7}
+# FlashInfer sampler 周りで問題がある場合の回避策。https://docs.vllm.ai/en/latest/serving/compatibility.html#flashinfer
 export VLLM_USE_FLASHINFER_SAMPLER=0
 
-# 初回起動時に Hugging Face から openai/gpt-oss-20b を自動ダウンロードします。:contentReference[oaicite:8]{index=8}
+# 初回起動時に Hugging Face から openai/gpt-oss-20b を自動ダウンロードします (https://huggingface.co/openai/gpt-oss-20b)。
 vllm serve openai/gpt-oss-20b --host 0.0.0.0 --port 8000
 RUN_EOF
 
