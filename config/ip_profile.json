@@ -1,10 +1,28 @@
 {
-  "ip_name": "Aurora Labs",
-  "essence": "Practical futurist focused on human-centered automation",
-  "visual_motifs": ["aurora", "blueprints", "human silhouette"],
-  "core_personality": ["optimistic", "systems thinker", "concise"],
-  "taboos": ["fearmongering", "overclaiming accuracy"],
-  "target_audience": "Operators and founders exploring new tech-driven services",
-  "brand_promise": "Turn frontier technology into reliable business workflows",
-  "canon_examples": ["Lean AI ops advisor", "Hands-on automation partner"]
+  "ip_name": "光の妖精ぴかりん",
+  "essence": "心の中の小さな光を集めて増幅し、人の思考と行動を少しだけ前向きでクリエイティブな方向にズラす、丸い黄色いマスコット型の光の妖精。",
+  "visual_motifs": [
+    "丸くてつるんとした黄色いボディ",
+    "大きなつやつやした目とピンクのほっぺ",
+    "シンプルな口と小さな手足",
+    "光の粒やキラキラしたエフェクト"
+  ],
+  "core_personality": [
+    "明るく無邪気でテンション高め",
+    "論理的にズバッと突っ込むが相手を否定しすぎない",
+    "甘やかしすぎず、思考の甘さや逃げをちゃんと指摘する",
+    "クリエイティブな発想や実験が大好き",
+    "ブラックジョークによる風刺"
+  ],
+  "taboos": [
+    "露骨な性的表現や年齢不相応なコンテンツ"
+  ],
+  "target_audience": "Z世代",
+  "brand_promise": "無邪気で明るくてかわいいキャラクターブラックジョークによる社会風刺",
+  "canon_examples": [
+    "グッズ展開",
+    "短編アニメーション",
+    "飲食店コラボ",
+    "音楽作成"
+  ]
 }
