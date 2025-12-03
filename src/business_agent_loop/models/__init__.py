@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+__all__ = ["IdeaRecord", "Task", "IterationLog"]
+
 
 def _utc_iso() -> str:
     return datetime.now(timezone.utc).isoformat()

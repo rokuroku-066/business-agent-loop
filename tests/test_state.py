@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from business_agent_loop.models import IdeaRecord, IterationLog, Task
-from business_agent_loop.state import StateStore
+from business_agent_loop.storage import StateStore
 
 
 def test_state_store_initializes(tmp_path: Path) -> None:
