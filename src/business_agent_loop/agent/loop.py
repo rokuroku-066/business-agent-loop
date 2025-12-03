@@ -70,6 +70,31 @@ class AgentLoop:
                 return task
         return None
 
+    def process_next_task(self, client: HarmonyClient, mode: str = "explore") -> bool:
+        self.initialize()
+        task = self.next_task()
+        if task is None:
+            return False
+
+        request = self.render_prompt(task)
+        result = client.run(request)
+
+        if task.meta is None:
+            task.meta = {}
+        task.meta["llm_note"] = result
+        task.status = "done"
+
+        updated_tasks: list[Task] = []
+        for existing in self.state_store.load_tasks():
+            if existing.id == task.id:
+                existing.status = task.status
+                existing.meta = task.meta
+            updated_tasks.append(existing)
+        self.state_store.save_tasks(updated_tasks)
+
+        self.record_iteration(task, mode=mode)
+        return True
+
     def render_prompt(self, task: Task) -> HarmonyRequest:
         role = self._role_for_task(task.type)
         ip = self.context.ip_profile
