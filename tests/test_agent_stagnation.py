@@ -89,7 +89,9 @@ def test_stagnation_triggers_shake_up_task(tmp_path: Path) -> None:
         agent.state_store.append_idea_history(idea_id, entry)
     seed_ready_task(agent)
 
-    assert agent._is_stalled(history, response["ideas"][0]["summary"], threshold=0.6, runs=3)
+    assert agent.stagnation_policy.is_stalled(
+        history, response["ideas"][0]["summary"], threshold=0.6, runs=3
+    )
 
     agent.run_next(mode="explore")
 
@@ -135,7 +137,7 @@ def test_diverse_history_skips_shake_up(tmp_path: Path) -> None:
         agent.state_store.append_idea_history(idea_id, entry)
     seed_ready_task(agent)
 
-    assert not agent._is_stalled(
+    assert not agent.stagnation_policy.is_stalled(
         diverse_history, response["ideas"][0]["summary"], threshold=0.6, runs=3
     )
 
