@@ -4,14 +4,14 @@
 
 ## 特徴
 - **ロール切替型エージェント**: Planner / Ideator / Critic / Editor の役割をモデルプロンプトで切り替え、タスク種別に応じた出力を得ます。
-- **テキストベースの永続化**: ベクタDBを使わず、`ideas/` `state/` `iterations/` `snapshots/` などに JSON / Markdown で履歴を保存します。
+- **テキストベースの永続化**: ベクタDBを使わず、`runtime/ideas/` `runtime/state/` `runtime/iterations/` `runtime/snapshots/` などに JSON / Markdown で履歴を保存します。
 - **停滞防止ロジック**: 反復が類似しすぎる場合に探索比率を上げたり、新しい方向性を要求するタスクを自動生成します。
 - **CLI 最低限対応**: ストレージ初期化やステータス確認、ダミーのイテレーション記録を行うサブコマンドを提供します。
 
 ## ディレクトリ構成
 - `config/`: `ip_profile.json`（不変のIP設定）と `project_config.json`（テーマごとの制約やポリシー）
 - `src/business_agent_loop/`: エージェントの実装と CLI エントリポイント
-- `ideas/` `iterations/` `snapshots/` `state/`: ループ実行時に生成される成果物や状態
+- `runtime/`: 実行時に生成される成果物や状態のルート（`ideas/` `iterations/` `snapshots/` `state/` を含む）
 - `docs/`: システムデザイン (`DESIGN.md`)
 - `tests/`: pytest ベースのテスト
 
@@ -39,7 +39,7 @@ GPU 付き Linux/WSL を想定していますが、CPU 環境でもフォルダ�
 `src/business_agent_loop/cli.py` に最低限の CLI が用意されています。仮想環境を有効化した状態で以下のように実行してください。
 
 ```bash
-python -m business_agent_loop.cli --base-dir . --config-dir ./config start
+python -m business_agent_loop.cli --base-dir ./runtime --config-dir ./config start
 python -m business_agent_loop.cli status
 python -m business_agent_loop.cli record-iteration --mode explore
 ```
