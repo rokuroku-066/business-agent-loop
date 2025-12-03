@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .agent.loop import AgentLoop
+from .runtime.harmony_client import HarmonyClient
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -28,6 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     record = subparsers.add_parser("record-iteration", help="Record a placeholder iteration log")
     record.add_argument("--mode", default="explore", help="Iteration mode descriptor")
 
+    step = subparsers.add_parser("step", help="Process a single task with the local LLM")
+    step.add_argument("--mode", default="explore", help="Iteration mode descriptor")
+
     return parser
 
 
@@ -50,6 +54,15 @@ def handle_record_iteration(agent: AgentLoop, mode: str) -> None:
     print(f"Recorded iteration at {path}")
 
 
+def handle_step(agent: AgentLoop, mode: str) -> None:
+    client = HarmonyClient()
+    processed = agent.process_next_task(client, mode=mode)
+    if processed:
+        print("Processed next task via Harmony client")
+    else:
+        print("No ready tasks to process")
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -61,6 +74,8 @@ def main() -> None:
         handle_status(agent)
     elif args.command == "record-iteration":
         handle_record_iteration(agent, mode=args.mode)
+    elif args.command == "step":
+        handle_step(agent, mode=args.mode)
     else:
         parser.error("Unsupported command")
 
