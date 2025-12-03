@@ -1,10 +1,9 @@
-from pathlib import Path
-
 import json
+from pathlib import Path
 
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.config import IPProfile, ProjectConfig
-from business_agent_loop.models import Task
+from business_agent_loop.models import IdeaRecord, Task
 
 
 class FakeHarmonyClient:
@@ -33,7 +32,7 @@ def build_agent(tmp_path: Path, model_client: object | None = None) -> AgentLoop
         goal_type="demo",
         constraints={},
         idea_templates=["template"],
-        iteration_policy={"explore_ratio": 0.5},
+        iteration_policy={"explore_ratio": 0.5, "stagnation_threshold": 0.2},
     )
     return AgentLoop(
         base_dir=tmp_path,
@@ -197,3 +196,131 @@ def test_iteration_logging_includes_prompt_and_response(tmp_path: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["details"]["response"]["summary"] == "completed"
     assert "prompt" in data["details"]
+
+
+def test_related_ideas_are_embedded_in_prompts(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path)
+    agent.state_store.ensure_layout()
+    idea = IdeaRecord(
+        id="idea-ctx",
+        title="Context idea",
+        summary="Reusable context block",
+        target_audience="operators",
+        value_proposition="helps testing",
+        revenue_model="subscription",
+        brand_fit_score=0.9,
+        novelty_score=0.4,
+        feasibility_score=0.8,
+        status="idea",
+        tags=["ops"],
+    )
+    agent.state_store.append_ideas([idea])
+    task = Task(
+        id="critic-ctx",
+        type="critic",
+        priority=10,
+        related_idea_ids=[idea.id],
+        status="ready",
+    )
+
+    prompt = agent.render_prompt(task)
+
+    assert idea.summary in prompt.user
+    assert idea.id in prompt.user
+
+
+def test_stalled_idea_triggers_shake_up_task(tmp_path: Path) -> None:
+    payload = {
+        "ideas": [
+            {
+                "id": "idea-stall",
+                "title": "Repeating",
+                "summary": "same update",
+                "target_audience": "operators",
+                "value_proposition": "keeps repeating",
+                "revenue_model": "subscription",
+                "brand_fit_score": 0.7,
+                "novelty_score": 0.5,
+                "feasibility_score": 0.8,
+                "status": "idea",
+                "tags": ["ops"],
+            }
+        ],
+        "follow_up_tasks": [],
+        "summary": "looping",
+    }
+    client = FakeHarmonyClient(payload)
+    agent = build_agent(tmp_path, model_client=client)
+    agent.state_store.ensure_layout()
+    agent.state_store.append_idea_history("idea-stall", "same update")
+    agent.state_store.append_idea_history("idea-stall", "same update")
+    agent.state_store.save_tasks(
+        [
+            Task(
+                id="edit-1",
+                type="edit",
+                priority=5,
+                related_idea_ids=["idea-stall"],
+                status="ready",
+            )
+        ]
+    )
+
+    agent.run_next()
+
+    tasks = agent.state_store.load_tasks()
+    assert any(task.type == "shake_up_idea" for task in tasks)
+
+
+def test_stalled_detection_requires_configured_run_count(tmp_path: Path) -> None:
+    payload = {
+        "ideas": [
+            {
+                "id": "idea-slow",
+                "title": "Slow repeat",
+                "summary": "nearly same",
+                "target_audience": "operators",
+                "value_proposition": "keeps repeating",
+                "revenue_model": "subscription",
+                "brand_fit_score": 0.7,
+                "novelty_score": 0.5,
+                "feasibility_score": 0.8,
+                "status": "idea",
+                "tags": ["ops"],
+            }
+        ],
+        "follow_up_tasks": [],
+        "summary": "looping",
+    }
+    client = FakeHarmonyClient(payload)
+    agent = build_agent(tmp_path, model_client=client)
+    agent.context.project_config.iteration_policy["stagnation_runs"] = 4
+    agent.state_store.ensure_layout()
+    agent.state_store.append_idea_history("idea-slow", "nearly same")
+    agent.state_store.append_idea_history("idea-slow", "nearly same")
+    agent.state_store.save_tasks(
+        [
+            Task(
+                id="edit-2",
+                type="edit",
+                priority=5,
+                related_idea_ids=["idea-slow"],
+                status="ready",
+            )
+        ]
+    )
+
+    agent.run_next()
+
+    tasks = agent.state_store.load_tasks()
+    assert not any(task.type == "shake_up_idea" for task in tasks)
+
+
+def test_mode_selection_balances_explore_and_deepen(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path)
+    agent.state_store.ensure_layout()
+    agent.state_store.iteration_state_file.write_text(
+        json.dumps({"explore": 5, "deepen": 0}), encoding="utf-8"
+    )
+
+    assert agent._select_mode() == "deepen"
