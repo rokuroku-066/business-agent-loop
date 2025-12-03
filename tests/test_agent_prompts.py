@@ -1,0 +1,103 @@
+import json
+from pathlib import Path
+
+from business_agent_loop.agent.loop import AgentContext, AgentLoop
+from business_agent_loop.config import IPProfile, ProjectConfig
+from business_agent_loop.models import IdeaRecord, Task
+
+
+def build_agent(tmp_path: Path) -> AgentLoop:
+    ip_profile = IPProfile(
+        ip_name="Demo",
+        essence="Test",
+        visual_motifs=["m"],
+        core_personality=["calm"],
+        taboos=["none"],
+        target_audience="operators",
+        brand_promise="reliability",
+        canon_examples=["ex"],
+    )
+    project = ProjectConfig(
+        project_name="Test Project",
+        goal_type="demo",
+        constraints={},
+        idea_templates=["template"],
+        iteration_policy={"explore_ratio": 0.5, "stagnation_threshold": 0.2},
+    )
+    return AgentLoop(base_dir=tmp_path, context=AgentContext(ip_profile, project))
+
+
+def test_prompts_include_related_idea_details(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path)
+    agent.state_store.ensure_layout()
+    idea = IdeaRecord(
+        id="idea-1",
+        title="Sample idea",
+        summary="A concise idea summary",
+        target_audience="builders",
+        value_proposition="Saves effort",
+        revenue_model="subscription",
+        brand_fit_score=0.7,
+        novelty_score=0.6,
+        feasibility_score=0.8,
+        status="draft",
+        tags=["ops", "automation"],
+    )
+    agent.state_store.append_ideas([idea])
+
+    task = Task(
+        id="critic-idea",
+        type="critic",
+        priority=5,
+        related_idea_ids=[idea.id],
+        status="ready",
+        meta={"note": "review"},
+    )
+
+    prompt = agent.render_prompt(task)
+
+    assert "## Related ideas" in prompt.user
+    assert f'"id": "{idea.id}"' in prompt.user
+    assert json.dumps(idea.title) in prompt.user
+    assert "Related ideas: idea-1" in prompt.user
+
+
+def test_shake_up_prompt_lists_recent_summaries(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path)
+    agent.state_store.ensure_layout()
+    idea = IdeaRecord(
+        id="idea-2",
+        title="Another idea",
+        summary="Original concept",
+        target_audience="operators",
+        value_proposition="Adds insights",
+        revenue_model="usage",
+        brand_fit_score=0.6,
+        novelty_score=0.4,
+        feasibility_score=0.9,
+        status="draft",
+        tags=["analysis"],
+    )
+    agent.state_store.append_ideas([idea])
+
+    history = ["First", "Second", "Third", "Fourth"]
+    for summary in history:
+        agent.state_store.append_idea_history(idea.id, summary)
+
+    task = Task(
+        id="shake-1",
+        type="shake_up_idea",
+        priority=1,
+        related_idea_ids=[idea.id],
+        status="ready",
+    )
+
+    prompt = agent.render_prompt(task)
+
+    assert "Shake up the idea. Return JSON with keys: ideas (at least 2 divergent directions), follow_up_tasks, summary." in prompt.user
+    assert "Recent summaries to avoid repeating:" in prompt.user
+    assert "Second" in prompt.user
+    assert "Third" in prompt.user
+    assert "Fourth" in prompt.user
+    assert "First" not in prompt.user
+    assert "Ensure new directions differ clearly from the recent updates." in prompt.user
