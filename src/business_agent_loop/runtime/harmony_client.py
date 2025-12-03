@@ -27,9 +27,9 @@ class HarmonyClient:
         self.base_url = base_url or "http://localhost:8000/v1"
 
     def run(self, request: HarmonyRequest) -> str:
-        endpoint = os.getenv("BUSINESS_AGENT_LLM_ENDPOINT")
+        endpoint = os.getenv("BUSINESS_AGENT_LLM_ENDPOINT", self.base_url)
         if not endpoint:
-            raise RuntimeError("BUSINESS_AGENT_LLM_ENDPOINT is not set")
+            raise RuntimeError("LLM endpoint is not configured")
 
         url = endpoint.rstrip("/") + "/generate"
         payload: dict[str, Any] = {
