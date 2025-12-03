@@ -43,7 +43,7 @@ case "$COMMAND" in
     usage
     exit 1
     ;;
-fi
+esac
 
 VENV_PATH="${REPO_ROOT}/.venv"
 if [[ -d "$VENV_PATH" ]]; then
