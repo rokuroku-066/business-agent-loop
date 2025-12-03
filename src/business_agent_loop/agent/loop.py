@@ -9,7 +9,7 @@ from typing import Dict, Iterable, Optional
 from ..config import IPProfile, ProjectConfig, load_configs
 from ..models import IdeaRecord, IterationLog, Task
 from ..runtime.harmony_client import HarmonyClient, HarmonyRequest
-from ..state import StateStore
+from ..storage import StateStore
 
 
 @dataclass
