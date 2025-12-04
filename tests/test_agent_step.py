@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import json
+from pathlib import Path
+
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.config import IPProfile, ProjectConfig
 
@@ -33,7 +36,12 @@ def build_agent(tmp_path: Path) -> AgentLoop:
         goal_type="demo",
         constraints={},
         idea_templates=["template"],
-        iteration_policy={"explore_ratio": 0.5},
+        iteration_policy={
+            "explore_ratio": 0.5,
+            "deepening_ratio": 0.5,
+            "stagnation_threshold": 0.6,
+            "stagnation_runs": 2,
+        },
     )
     return AgentLoop(
         base_dir=tmp_path,

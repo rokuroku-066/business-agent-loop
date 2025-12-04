@@ -153,6 +153,23 @@ Harmony では:
   * 探索：深化の比率（例: 60:40）
   * 停滞検知のパラメータ（後述）
 
+`iteration_policy` はロード直後に検証し、
+
+* `explore_ratio` と `deepening_ratio` は `explore_ratio + deepening_ratio = 1.0` を満たすこと
+* `stagnation_threshold ∈ [0, 1]`
+* `stagnation_runs ≥ 1`
+
+を満たさない場合は起動時に例外を投げる。
+
+モード選択は、累積実行数 `n = explore + deepen` に対して
+
+* `target_explore = explore_ratio * n`
+* `target_deepen = deepening_ratio * n`
+
+を計算し、各カウントが目標を下回っている側を優先する。
+
+停滞検知は連続サマリの Jaccard 類似度 `J(a, b) = |a ∩ b| / |a ∪ b|` を計算し、`stagnation_runs` 個の隣接ペアすべてで `J ≥ stagnation_threshold` を満たした場合に「停滞」と判断、強制的に揺さぶるタスクを挿入する。
+
 オーケストレータは毎ループでこの設定を読み込み、developer メッセージに `# Project Config` として埋め込む。
 
 ---

@@ -7,15 +7,27 @@ from ...models import IdeaRecord, Task
 
 class StagnationPolicy:
     def is_stalled(self, history: list[str], candidate: str, *, threshold: float, runs: int) -> bool:
-        if runs < 2:
-            runs = 2
-        window = history[-(runs - 1) :] + [candidate]
-        if len(window) < runs:
+        try:
+            threshold_value = float(threshold)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("stagnation_threshold must be numeric") from exc
+        if not 0.0 <= threshold_value <= 1.0:
+            raise ValueError("stagnation_threshold must be between 0.0 and 1.0")
+        try:
+            runs_value = int(runs)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("stagnation_runs must be an integer") from exc
+        if runs_value < 1:
+            raise ValueError("stagnation_runs must be at least 1")
+        if runs_value < 2:
+            runs_value = 2
+        window = history[-(runs_value - 1) :] + [candidate]
+        if len(window) < runs_value:
             return False
         similarities = [
             self._jaccard_similarity(window[i], window[i + 1]) for i in range(len(window) - 1)
         ]
-        return all(score >= threshold for score in similarities)
+        return all(score >= threshold_value for score in similarities)
 
     def create_shake_up_task(self, idea: IdeaRecord, history: list[str]) -> Task:
         meta = {

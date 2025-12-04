@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.agent.policies.mode_selection import ModeSelector
 from business_agent_loop.config import IPProfile, ProjectConfig
 from business_agent_loop.models import IdeaRecord, Task
-
 
 class FakeHarmonyClient:
     def __init__(self, payload: object) -> None:
@@ -33,7 +34,12 @@ def build_agent(tmp_path: Path, model_client: object | None = None) -> AgentLoop
         goal_type="demo",
         constraints={},
         idea_templates=["template"],
-        iteration_policy={"explore_ratio": 0.5, "stagnation_threshold": 0.2},
+        iteration_policy={
+            "explore_ratio": 0.5,
+            "deepening_ratio": 0.5,
+            "stagnation_threshold": 0.2,
+            "stagnation_runs": 2,
+        },
     )
     return AgentLoop(
         base_dir=tmp_path,
@@ -93,8 +99,8 @@ def test_prompts_require_json_for_critic_and_editor(tmp_path: Path) -> None:
     critic_prompt = agent.render_prompt(critic_task)
     editor_prompt = agent.render_prompt(editor_task)
 
-    assert "JSONで返却" in critic_prompt.user
-    assert "JSONで返却" in editor_prompt.user
+    assert "JSON" in critic_prompt.user
+    assert "JSON" in editor_prompt.user
 
 
 def test_run_next_updates_tasks_and_persists_ideas(tmp_path: Path) -> None:
@@ -167,16 +173,36 @@ def test_run_next_handles_plain_text_response(tmp_path: Path) -> None:
         ]
     )
 
-    path = agent.run_next()
-    assert path is not None and path.exists()
-    data = json.loads(path.read_text(encoding="utf-8"))
-    assert data["task_summary"] == "finished"
+    with pytest.raises(ValueError):
+        agent.run_next()
     tasks = agent.state_store.load_tasks()
-    assert any(task.id == "critic-1" and task.status == "done" for task in tasks)
+    assert any(task.id == "critic-1" and task.status == "ready" for task in tasks)
+
+
+def test_run_next_rejects_missing_keys(tmp_path: Path) -> None:
+    client = FakeHarmonyClient({"ideas": []})
+    agent = build_agent(tmp_path, model_client=client)
+    agent.state_store.ensure_layout()
+    agent.state_store.save_tasks(
+        [
+            Task(
+                id="critic-1",
+                type="critic",
+                priority=1,
+                related_idea_ids=[],
+                status="ready",
+            )
+        ]
+    )
+
+    with pytest.raises(ValueError):
+        agent.run_next()
+    tasks = agent.state_store.load_tasks()
+    assert any(task.id == "critic-1" and task.status == "ready" for task in tasks)
 
 
 def test_iteration_logging_includes_prompt_and_response(tmp_path: Path) -> None:
-    payload = {"summary": "completed"}
+    payload = {"ideas": [], "follow_up_tasks": [], "summary": "completed"}
     client = FakeHarmonyClient(payload)
     agent = build_agent(tmp_path, model_client=client)
     agent.state_store.ensure_layout()

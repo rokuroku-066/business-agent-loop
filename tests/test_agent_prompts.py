@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+import json
+from pathlib import Path
+
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.config import IPProfile, ProjectConfig
 from business_agent_loop.models import IdeaRecord, Task
@@ -22,7 +25,12 @@ def build_agent(tmp_path: Path) -> AgentLoop:
         goal_type="demo",
         constraints={},
         idea_templates=["template"],
-        iteration_policy={"explore_ratio": 0.5, "stagnation_threshold": 0.2},
+        iteration_policy={
+            "explore_ratio": 0.5,
+            "deepening_ratio": 0.5,
+            "stagnation_threshold": 0.2,
+            "stagnation_runs": 2,
+        },
     )
     return AgentLoop(base_dir=tmp_path, context=AgentContext(ip_profile, project))
 

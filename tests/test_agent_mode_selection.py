@@ -1,13 +1,18 @@
 import json
 from pathlib import Path
 
+import pytest
+
+import json
+from pathlib import Path
+
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.agent.policies.mode_selection import ModeSelector
 from business_agent_loop.config import IPProfile, ProjectConfig
 
 
 
-def build_agent(tmp_path: Path, *, explore_ratio: float, deepen_ratio: float) -> AgentLoop:
+def build_agent(tmp_path: Path, *, explore_ratio: float, deepening_ratio: float) -> AgentLoop:
     ip_profile = IPProfile(
         ip_name="Demo",
         essence="Test",
@@ -25,7 +30,7 @@ def build_agent(tmp_path: Path, *, explore_ratio: float, deepen_ratio: float) ->
         idea_templates=["template"],
         iteration_policy={
             "explore_ratio": explore_ratio,
-            "deepening_ratio": deepen_ratio,
+            "deepening_ratio": deepening_ratio,
         },
     )
     return AgentLoop(
@@ -35,7 +40,7 @@ def build_agent(tmp_path: Path, *, explore_ratio: float, deepen_ratio: float) ->
 
 
 def test_select_mode_honors_iteration_policy_ratios(tmp_path: Path) -> None:
-    agent = build_agent(tmp_path, explore_ratio=0.7, deepen_ratio=0.3)
+    agent = build_agent(tmp_path, explore_ratio=0.7, deepening_ratio=0.3)
     agent.state_store.ensure_layout()
     selector = ModeSelector()
 
@@ -58,7 +63,7 @@ def test_select_mode_honors_iteration_policy_ratios(tmp_path: Path) -> None:
 
 
 def test_corrupted_iteration_state_defaults_to_explore(tmp_path: Path) -> None:
-    agent = build_agent(tmp_path, explore_ratio=0.6, deepen_ratio=0.4)
+    agent = build_agent(tmp_path, explore_ratio=0.6, deepening_ratio=0.4)
     agent.state_store.ensure_layout()
     selector = ModeSelector()
 
@@ -66,3 +71,10 @@ def test_corrupted_iteration_state_defaults_to_explore(tmp_path: Path) -> None:
 
     assert agent._load_iteration_state() == {}
     assert selector.select_mode({}, agent.context.project_config.iteration_policy) == "explore"
+
+
+def test_missing_deepening_ratio_is_error(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path, explore_ratio=0.6, deepening_ratio=0.4)
+    selector = ModeSelector()
+    with pytest.raises(ValueError):
+        selector.select_mode({}, {"explore_ratio": 0.6})

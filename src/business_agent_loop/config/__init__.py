@@ -11,6 +11,7 @@ __all__ = [
     "load_ip_profile",
     "load_project_config",
     "load_configs",
+    "validate_configs",
 ]
 
 
@@ -55,3 +56,7 @@ def load_configs(config_dir: Path) -> tuple[IPProfile, ProjectConfig]:
     if not project_config_path.exists():
         raise FileNotFoundError(f"Missing project config at {project_config_path}")
     return load_ip_profile(ip_profile_path), load_project_config(project_config_path)
+
+
+from .validation import validate_configs
+

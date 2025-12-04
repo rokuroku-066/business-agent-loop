@@ -5,8 +5,10 @@ from typing import Dict
 
 class ModeSelector:
     def select_mode(self, iteration_state: Dict[str, int], iteration_policy: Dict[str, object]) -> str:
-        explore_ratio = float(iteration_policy.get("explore_ratio", 0.5))
-        deepen_ratio = float(iteration_policy.get("deepening_ratio", 1 - explore_ratio))
+        if "explore_ratio" not in iteration_policy or "deepening_ratio" not in iteration_policy:
+            raise ValueError("iteration_policy must define both explore_ratio and deepening_ratio")
+        explore_ratio = float(iteration_policy["explore_ratio"])
+        deepen_ratio = float(iteration_policy["deepening_ratio"])
         explore_count = iteration_state.get("explore", 0)
         deepen_count = iteration_state.get("deepen", 0)
         total = explore_count + deepen_count

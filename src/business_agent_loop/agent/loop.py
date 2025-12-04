@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
-from ..config import IPProfile, ProjectConfig, load_configs
+from ..config import IPProfile, ProjectConfig, load_configs, validate_configs
 from ..models import IdeaRecord, IterationLog, Task
 from ..runtime.harmony_client import HarmonyClient, HarmonyRequest
 from ..storage import StateStore
 from .policies.mode_selection import ModeSelector
 from .policies.stagnation import StagnationPolicy
 from .prompts.builder import PromptBuilder
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -48,6 +52,7 @@ class AgentLoop:
     @classmethod
     def from_config_dir(cls, base_dir: Path, config_dir: Path) -> "AgentLoop":
         ip_profile, project_config = load_configs(config_dir)
+        validate_configs(ip_profile, project_config)
         return cls(base_dir, AgentContext(ip_profile, project_config))
 
     def initialize(self) -> None:
@@ -134,12 +139,9 @@ class AgentLoop:
             self.state_store.append_ideas(ideas)
 
         idea_history = self.state_store.load_idea_history()
-        stagnation_threshold = float(
-            self.context.project_config.iteration_policy.get("stagnation_threshold", 0.9)
-        )
-        stagnation_runs = int(
-            self.context.project_config.iteration_policy.get("stagnation_runs", 3)
-        )
+        iteration_policy = self.context.project_config.iteration_policy
+        stagnation_threshold = float(iteration_policy["stagnation_threshold"])
+        stagnation_runs = int(iteration_policy["stagnation_runs"])
         stagnation_tasks = []
         for idea in ideas:
             prior_history = idea_history.get(idea.id, [])
@@ -169,15 +171,48 @@ class AgentLoop:
     def _parse_model_response(
         self, response: object
     ) -> tuple[list[IdeaRecord], list[Task], str]:
-        if not isinstance(response, Dict):
-            return [], [], str(response)
+        payload: Dict[str, object]
+        if isinstance(response, str):
+            try:
+                payload = json.loads(response)
+            except json.JSONDecodeError as exc:
+                logger.error("Model response is out of spec: not JSON")
+                raise ValueError("Model response must be valid JSON") from exc
+        elif isinstance(response, Dict):
+            payload = response
+        else:
+            logger.error(
+                "Model response is out of spec: expected JSON object, got %s",
+                type(response).__name__,
+            )
+            raise ValueError("Model response must be a JSON object")
 
-        ideas = [self._idea_from_payload(payload) for payload in response.get("ideas", [])]
-        follow_up_tasks = [
-            self._task_from_payload(payload) for payload in response.get("follow_up_tasks", [])
-        ]
-        summary = response.get("summary", "")
-        return ideas, follow_up_tasks, str(summary)
+        required_keys = ("ideas", "follow_up_tasks", "summary")
+        missing = [key for key in required_keys if key not in payload]
+        if missing:
+            logger.error(
+                "Model response is out of spec: missing keys %s", ", ".join(missing)
+            )
+            raise ValueError(f"Model response missing keys: {', '.join(missing)}")
+
+        ideas_raw = payload.get("ideas")
+        follow_up_raw = payload.get("follow_up_tasks")
+        summary = payload.get("summary")
+
+        if not isinstance(ideas_raw, list) or not isinstance(follow_up_raw, list):
+            logger.error(
+                "Model response is out of spec: ideas and follow_up_tasks must be lists"
+            )
+            raise ValueError("ideas and follow_up_tasks must be lists")
+        if not isinstance(summary, str):
+            logger.error(
+                "Model response is out of spec: summary must be a string"
+            )
+            raise ValueError("summary must be a string")
+
+        ideas = [self._idea_from_payload(payload) for payload in ideas_raw]
+        follow_up_tasks = [self._task_from_payload(payload) for payload in follow_up_raw]
+        return ideas, follow_up_tasks, summary
 
     def _task_from_payload(self, payload: Dict[str, object]) -> Task:
         defaults = {

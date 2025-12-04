@@ -44,6 +44,13 @@ python -m business_agent_loop.cli status
 python -m business_agent_loop.cli record-iteration --mode explore
 ```
 
+## モード選択と停滞検知のロジック
+- **探索 vs 深堀りの比率**: `iteration_policy` の `explore_ratio` と `deepening_ratio` は起動時に検証され、必ず `explore_ratio + deepening_ratio = 1.0` を満たす必要があります。イテレーションの累計 `n = explore + deepen` に対して、
+  - 探索の目標回数: `target_explore = explore_ratio * n`
+  - 深堀りの目標回数: `target_deepen = deepening_ratio * n`
+  カウントが目標より少ない側を優先的に実行します。
+- **停滞判定**: 連続サマリ間の Jaccard 類似度 `J(a, b) = |a ∩ b| / |a ∪ b|` を用い、`stagnation_threshold` 以上の類似度が `stagnation_runs` 回続いた場合に「停滞」と判断します（`threshold ∈ [0, 1]`）。閾値や回数は `iteration_policy` に記載し、0〜1 以外や 1 未満の回数は起動時に拒否されます。
+
 ## 開発・テストのヒント
 - コードスタイル: Black で整形し、ruff の警告を確認してください。
 - テスト: 変更後は可能な範囲で `pytest` を実行します。
