@@ -111,11 +111,13 @@ if [ ! -f config/ip_profile.json ]; then
   cat > config/ip_profile.json << 'IP_EOF'
 {
   "ip_name": "Pikarin",
-  "description": "TODO: 光の妖精ぴかりんの世界観・人格・ビジュアル・口調などをここに定義する。",
-  "core_personality": "TODO: 明るい・毒舌・ロジカル など",
-  "visual_motifs": [],
-  "taboos": [],
-  "target_audience": []
+  "essence": "TODO: 光の妖精ぴかりんの世界観・人格・ビジュアル・口調などをここに定義する。",
+  "visual_motifs": ["TODO"],
+  "core_personality": ["TODO"],
+  "taboos": ["TODO"],
+  "target_audience": "TODO: 主なファン層",
+  "brand_promise": "TODO: 価値提案を記述",
+  "canon_examples": ["TODO"]
 }
 IP_EOF
   echo "  config/ip_profile.json を作成しました。"
@@ -135,8 +137,9 @@ if [ ! -f config/project_config.json ]; then
   "iteration_policy": {
     "max_tokens_per_iteration": 4096,
     "explore_ratio": 0.6,
-    "deepen_ratio": 0.4,
-    "stagnation_threshold": 3
+    "deepening_ratio": 0.4,
+    "stagnation_threshold": 0.6,
+    "stagnation_runs": 3
   }
 }
 PROJECT_EOF

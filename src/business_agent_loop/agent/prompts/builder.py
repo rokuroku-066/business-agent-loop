@@ -66,6 +66,8 @@ class PromptBuilder:
             f"イテレーションポリシー: {json.dumps(project.iteration_policy)}",
             "# 役割",
             f"このイテレーションでは{role}として行動してください。",
+            "出力は必ず JSON 形式のみで返し、ideas / follow_up_tasks / summary の3キーを必須で含めてください。",
+            "平文の説明や別フォーマットは不要です。",
         ]
         return "\n".join(developer_lines)
 
@@ -77,7 +79,11 @@ class PromptBuilder:
         recent_summaries: list[str] | None,
     ) -> str:
         related = ", ".join(task.related_idea_ids) if task.related_idea_ids else "なし"
-        base = [f"このイテレーションでは{role}として行動してください。"]
+        base = [
+            f"このイテレーションでは{role}として行動してください。",
+            "出力は必ず JSON のみ。必須キー: ideas (リスト), follow_up_tasks (リスト), summary (文字列)。",
+            "JSON 以外のテキストは一切返さないでください。",
+        ]
         if related_ideas:
             base.append("## 関連アイデア")
             for idea in related_ideas:

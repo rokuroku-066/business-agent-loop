@@ -31,6 +31,7 @@ def build_agent(tmp_path: Path, payload: object) -> AgentLoop:
         idea_templates=["template"],
         iteration_policy={
             "explore_ratio": 0.5,
+            "deepening_ratio": 0.5,
             "stagnation_threshold": 0.6,
             "stagnation_runs": 3,
         },
@@ -145,3 +146,20 @@ def test_diverse_history_skips_shake_up(tmp_path: Path) -> None:
 
     tasks = agent.state_store.load_tasks()
     assert not any(task.type == "shake_up_idea" for task in tasks)
+
+
+def test_stagnation_policy_validates_threshold_and_runs() -> None:
+    policy = StagnationPolicy()
+    with pytest.raises(ValueError):
+        policy.is_stalled([], "candidate", threshold=1.1, runs=2)
+    with pytest.raises(ValueError):
+        policy.is_stalled([], "candidate", threshold=0.5, runs=0)
+import json
+from pathlib import Path
+
+import pytest
+
+from business_agent_loop.agent.loop import AgentContext, AgentLoop
+from business_agent_loop.agent.policies.stagnation import StagnationPolicy
+from business_agent_loop.config import IPProfile, ProjectConfig
+from business_agent_loop.models import Task
