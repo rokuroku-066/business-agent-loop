@@ -17,6 +17,7 @@ class PromptBuilder:
         "critic": "critic",
         "edit": "editor",
         "shake_up_idea": "ideator",
+        "research": "researcher",
     }
 
     def __init__(self, context: "AgentContext") -> None:
@@ -31,12 +32,16 @@ class PromptBuilder:
         *,
         related_ideas: Iterable[IdeaRecord] = (),
         recent_summaries: list[str] | None = None,
+        search_results: list[dict[str, str]] | None = None,
     ) -> HarmonyRequest:
         role = self.role_for_task(task.type)
         system = self._system_prompt()
         developer = self._developer_prompt(role)
-        user = self._task_instructions(task, role, related_ideas, recent_summaries)
-        return HarmonyRequest(system=system, developer=developer, user=user)
+        user = self._task_instructions(
+            task, role, related_ideas, recent_summaries, search_results or []
+        )
+        context = {"search_hits": search_results} if search_results else None
+        return HarmonyRequest(system=system, developer=developer, user=user, context=context)
 
     def _system_prompt(self) -> str:
         ip = self.context.ip_profile
@@ -77,6 +82,7 @@ class PromptBuilder:
         role: str,
         related_ideas: Iterable[IdeaRecord],
         recent_summaries: list[str] | None,
+        search_results: list[dict[str, str]],
     ) -> str:
         related = ", ".join(task.related_idea_ids) if task.related_idea_ids else "なし"
         base = [
@@ -107,7 +113,7 @@ class PromptBuilder:
         if task.type == "shake_up_idea":
             base.append(
                 "アイデアを揺さぶってください。JSONで返却し、キーは ideas（少なくとも2つの方向性）、"
-                "follow_up_tasks、summary としてください。"
+                "follow_up_tasks、summary としてください。",
             )
             if recent_summaries:
                 base.append("重複を避けるための最近のサマリー:")
@@ -117,26 +123,41 @@ class PromptBuilder:
         elif role == "planner":
             base.append(
                 "プロジェクトを前進させるフォローアップタスクを提案してください。"
-                " JSONで返却し、キーは follow_up_tasks（リスト）、summary としてください。"
+                " JSONで返却し、キーは follow_up_tasks（リスト）、summary としてください。",
             )
         elif role == "ideator":
             base.append(
                 "提供されたテンプレートに沿ってビジネスアイデアを生成してください。"
                 " JSONで返却し、キーは ideas（アイデア記録のリスト）、"
-                " follow_up_tasks、summary としてください。"
+                " follow_up_tasks、summary としてください。",
             )
         elif role == "critic":
             base.append(
                 "既存のアイデアをレビューし、改善点を提案してください。"
                 " JSONで返却し、キーは ideas（改訂案のリスト。任意）、"
-                " follow_up_tasks（リスト）、summary としてください。"
+                " follow_up_tasks（リスト）、summary としてください。",
             )
         elif role == "editor":
             base.append(
                 "選択されたアイデアを磨き上げ、準備完了かを示してください。"
                 " JSONで返却し、キーは ideas（リスト）、follow_up_tasks（任意のリスト）、"
-                "summary としてください。"
+                "summary としてください。",
             )
+        elif role == "researcher":
+            base.append(
+                "指定されたクエリについて外部検索のヒットを読み、短く要約してください。"
+                " JSONで返却し、キーは ideas（関連する洞察や機会のリスト。任意）、"
+                " follow_up_tasks（追加リサーチやアクション項目のリスト）、summary としてください。",
+            )
+        if search_results:
+            base.append("## 外部リサーチ結果")
+            base.append(
+                "以下の検索結果を参考にしてください。要約や引用を行う場合は番号を明示してください。"
+            )
+            for idx, hit in enumerate(search_results, start=1):
+                base.append(
+                    f"{idx}. {hit.get('title', '')} ({hit.get('href', '')}) - {hit.get('snippet', '')}"
+                )
         if task.meta:
             base.append(f"タスクの補足: {json.dumps(task.meta)}")
         base.append(f"関連アイデア: {related}")

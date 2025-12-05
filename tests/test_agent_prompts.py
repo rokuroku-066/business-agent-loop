@@ -2,11 +2,11 @@ import json
 from pathlib import Path
 
 import json
-from pathlib import Path
 
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
-from business_agent_loop.config import IPProfile, ProjectConfig
+from business_agent_loop.config import IPProfile, ProjectConfig, SearchConfig
 from business_agent_loop.models import IdeaRecord, Task
+from business_agent_loop.runtime.ddg_search import SearchResult
 
 
 def build_agent(tmp_path: Path) -> AgentLoop:
@@ -32,7 +32,9 @@ def build_agent(tmp_path: Path) -> AgentLoop:
             "stagnation_runs": 2,
         },
     )
-    return AgentLoop(base_dir=tmp_path, context=AgentContext(ip_profile, project))
+    return AgentLoop(
+        base_dir=tmp_path, context=AgentContext(ip_profile, project, SearchConfig())
+    )
 
 
 def test_prompts_include_related_idea_details(tmp_path: Path) -> None:
@@ -109,3 +111,37 @@ def test_shake_up_prompt_lists_recent_summaries(tmp_path: Path) -> None:
     assert "Fourth" in prompt.user
     assert "First" not in prompt.user
     assert "新しい方向性が最近の更新と明確に異なるようにしてください。" in prompt.user
+
+def test_research_prompt_includes_evidence(tmp_path: Path) -> None:
+    agent = build_agent(tmp_path)
+
+    class FakeSearchClient:
+        def __init__(self) -> None:
+            self.queries: list[str] = []
+
+        def search(self, query: str) -> list[SearchResult]:
+            self.queries.append(query)
+            return [
+                SearchResult(
+                    title="Result A", href="https://example.com", snippet="Summary A"
+                )
+            ]
+
+    agent.search_client = FakeSearchClient()  # type: ignore[assignment]
+    task = Task(
+        id="research-1",
+        type="research",
+        priority=5,
+        related_idea_ids=[],
+        status="ready",
+        meta={"query": "sample topic"},
+    )
+
+    prompt = agent.render_prompt(task)
+
+    assert "外部リサーチ結果" in prompt.user
+    assert "Result A" in prompt.user
+    assert prompt.context is not None
+    assert prompt.context.get("search_hits")
+    assert agent.search_client.queries == ["sample topic"]
+    assert task.meta is not None and "search_hits" in task.meta
