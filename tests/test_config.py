@@ -33,16 +33,26 @@ def test_load_configs(tmp_path: Path) -> None:
             "stagnation_runs": 2,
         },
     }
+    search_config = {
+        "backend": "duckduckgo",
+        "region": "jp-jp",
+        "safesearch": "strict",
+        "max_results": 3,
+        "timeout": 8,
+    }
 
     (config_dir / "ip_profile.json").write_text(json.dumps(ip_profile), encoding="utf-8")
     (config_dir / "project_config.json").write_text(
         json.dumps(project_config), encoding="utf-8"
     )
+    (config_dir / "search.json").write_text(json.dumps(search_config), encoding="utf-8")
 
-    ip, project = config.load_configs(config_dir)
+    ip, project, search = config.load_configs(config_dir)
 
     assert ip.ip_name == "Test IP"
     assert project.project_name == "Demo"
+    assert search.region == "jp-jp"
+    assert search.max_results == 3
 
 
 def test_validate_configs_checks_ratios(tmp_path: Path) -> None:

@@ -5,7 +5,7 @@ import pytest
 
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.agent.policies.mode_selection import ModeSelector
-from business_agent_loop.config import IPProfile, ProjectConfig
+from business_agent_loop.config import IPProfile, ProjectConfig, SearchConfig
 from business_agent_loop.models import IdeaRecord, Task
 
 class FakeHarmonyClient:
@@ -43,7 +43,7 @@ def build_agent(tmp_path: Path, model_client: object | None = None) -> AgentLoop
     )
     return AgentLoop(
         base_dir=tmp_path,
-        context=AgentContext(ip_profile, project),
+        context=AgentContext(ip_profile, project, SearchConfig()),
         model_client=model_client,
     )
 

@@ -3,12 +3,9 @@ from pathlib import Path
 
 import pytest
 
-import json
-from pathlib import Path
-
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
 from business_agent_loop.agent.policies.mode_selection import ModeSelector
-from business_agent_loop.config import IPProfile, ProjectConfig
+from business_agent_loop.config import IPProfile, ProjectConfig, SearchConfig
 
 
 
@@ -35,7 +32,7 @@ def build_agent(tmp_path: Path, *, explore_ratio: float, deepening_ratio: float)
     )
     return AgentLoop(
         base_dir=tmp_path,
-        context=AgentContext(ip_profile, project),
+        context=AgentContext(ip_profile, project, SearchConfig()),
     )
 
 

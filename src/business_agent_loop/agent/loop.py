@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
-from ..config import IPProfile, ProjectConfig, load_configs, validate_configs
+from ..config import IPProfile, ProjectConfig, SearchConfig, load_configs, validate_configs
 from ..models import IdeaRecord, IterationLog, Task
+from ..runtime.ddg_search import SearchClient
 from ..runtime.harmony_client import HarmonyClient, HarmonyRequest
 from ..storage import StateStore
 from .policies.mode_selection import ModeSelector
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 class AgentContext:
     ip_profile: IPProfile
     project_config: ProjectConfig
+    search_config: SearchConfig
 
 
 class AgentLoop:
@@ -40,20 +42,22 @@ class AgentLoop:
         prompt_builder: PromptBuilder | None = None,
         mode_selector: ModeSelector | None = None,
         stagnation_policy: StagnationPolicy | None = None,
+        search_client: SearchClient | None = None,
     ) -> None:
         self.base_dir = base_dir
         self.context = context
         self.state_store = StateStore(base_dir)
         self.model_client = model_client or HarmonyClient()
+        self.search_client = search_client or SearchClient.from_config(context.search_config)
         self.prompt_builder = prompt_builder or PromptBuilder(context)
         self.mode_selector = mode_selector or ModeSelector()
         self.stagnation_policy = stagnation_policy or StagnationPolicy()
 
     @classmethod
     def from_config_dir(cls, base_dir: Path, config_dir: Path) -> "AgentLoop":
-        ip_profile, project_config = load_configs(config_dir)
+        ip_profile, project_config, search_config = load_configs(config_dir)
         validate_configs(ip_profile, project_config)
-        return cls(base_dir, AgentContext(ip_profile, project_config))
+        return cls(base_dir, AgentContext(ip_profile, project_config, search_config))
 
     def initialize(self) -> None:
         self.state_store.ensure_layout()
@@ -115,10 +119,12 @@ class AgentLoop:
         if task.type == "shake_up_idea" and task.related_idea_ids:
             idea_history = self.state_store.load_idea_history()
             recent_history = idea_history.get(task.related_idea_ids[0], [])[-3:]
+        search_results = self._collect_search_results(task)
         return self.prompt_builder.build(
             task,
             related_ideas=related_ideas,
             recent_summaries=recent_history,
+            search_results=search_results,
         )
 
     def run_next(self, mode: Optional[str] = None) -> Path | None:
@@ -240,9 +246,26 @@ class AgentLoop:
                 if task.meta is None:
                     task.meta = {}
                 task.meta["last_result"] = "completed"
+                if current_task.meta:
+                    task.meta.update(current_task.meta)
             updated.append(task)
         updated.extend(new_tasks)
         return updated
+
+    def _collect_search_results(self, task: Task) -> list[dict[str, str]]:
+        if task.type != "research":
+            return []
+        query = None
+        if task.meta:
+            query = task.meta.get("query") or task.meta.get("note")
+        if not query:
+            return []
+        results = [asdict(result) for result in self.search_client.search(str(query))]
+        if task.meta is None:
+            task.meta = {}
+        task.meta.setdefault("query", query)
+        task.meta["search_hits"] = results
+        return results
 
     def record_iteration(
         self,

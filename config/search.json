@@ -1,0 +1,7 @@
+{
+  "backend": "auto",
+  "region": "us-en",
+  "safesearch": "moderate",
+  "max_results": 10,
+  "timeout": 5
+}

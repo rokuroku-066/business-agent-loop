@@ -1,7 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from business_agent_loop.agent.loop import AgentContext, AgentLoop
-from business_agent_loop.config import IPProfile, ProjectConfig
+from business_agent_loop.agent.policies.stagnation import StagnationPolicy
+from business_agent_loop.config import IPProfile, ProjectConfig, SearchConfig
 from business_agent_loop.models import Task
 
 
@@ -39,7 +42,7 @@ def build_agent(tmp_path: Path, payload: object) -> AgentLoop:
     client = FakeHarmonyClient(payload)
     return AgentLoop(
         base_dir=tmp_path,
-        context=AgentContext(ip_profile, project),
+        context=AgentContext(ip_profile, project, SearchConfig()),
         model_client=client,
     )
 
@@ -154,12 +157,3 @@ def test_stagnation_policy_validates_threshold_and_runs() -> None:
         policy.is_stalled([], "candidate", threshold=1.1, runs=2)
     with pytest.raises(ValueError):
         policy.is_stalled([], "candidate", threshold=0.5, runs=0)
-import json
-from pathlib import Path
-
-import pytest
-
-from business_agent_loop.agent.loop import AgentContext, AgentLoop
-from business_agent_loop.agent.policies.stagnation import StagnationPolicy
-from business_agent_loop.config import IPProfile, ProjectConfig
-from business_agent_loop.models import Task

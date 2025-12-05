@@ -8,8 +8,10 @@ from typing import Any, Dict
 __all__ = [
     "IPProfile",
     "ProjectConfig",
+    "SearchConfig",
     "load_ip_profile",
     "load_project_config",
+    "load_search_config",
     "load_configs",
     "validate_configs",
 ]
@@ -36,6 +38,18 @@ class ProjectConfig:
     iteration_policy: Dict[str, Any]
 
 
+@dataclass
+class SearchConfig:
+    backend: str = "auto"
+    region: str = "us-en"
+    safesearch: str = "moderate"
+    max_results: int = 10
+    timeout: int = 5
+    page: int = 1
+    timelimit: str | None = None
+    proxy: str | None = None
+
+
 def load_ip_profile(path: Path) -> IPProfile:
     with path.open("r", encoding="utf-8") as file:
         content = json.load(file)
@@ -48,14 +62,27 @@ def load_project_config(path: Path) -> ProjectConfig:
     return ProjectConfig(**content)
 
 
-def load_configs(config_dir: Path) -> tuple[IPProfile, ProjectConfig]:
+def load_search_config(path: Path) -> SearchConfig:
+    if not path.exists():
+        return SearchConfig()
+    with path.open("r", encoding="utf-8") as file:
+        content = json.load(file)
+    return SearchConfig(**content)
+
+
+def load_configs(config_dir: Path) -> tuple[IPProfile, ProjectConfig, SearchConfig]:
     ip_profile_path = config_dir / "ip_profile.json"
     project_config_path = config_dir / "project_config.json"
+    search_config_path = config_dir / "search.json"
     if not ip_profile_path.exists():
         raise FileNotFoundError(f"Missing IP profile at {ip_profile_path}")
     if not project_config_path.exists():
         raise FileNotFoundError(f"Missing project config at {project_config_path}")
-    return load_ip_profile(ip_profile_path), load_project_config(project_config_path)
+    return (
+        load_ip_profile(ip_profile_path),
+        load_project_config(project_config_path),
+        load_search_config(search_config_path),
+    )
 
 
 from .validation import validate_configs

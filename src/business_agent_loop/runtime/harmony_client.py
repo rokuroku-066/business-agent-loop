@@ -13,6 +13,7 @@ class HarmonyRequest:
     system: str
     developer: str
     user: str
+    context: dict[str, object] | None = None
 
 
 class HarmonyClient:
@@ -37,6 +38,8 @@ class HarmonyClient:
             "developer": request.developer,
             "user": request.user,
         }
+        if request.context:
+            payload["context"] = request.context
         data = json.dumps(payload).encode("utf-8")
         http_request = Request(
             url,
