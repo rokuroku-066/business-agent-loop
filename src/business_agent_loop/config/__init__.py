@@ -40,11 +40,13 @@ class ProjectConfig:
 
 @dataclass
 class SearchConfig:
-    backend: str = "duckduckgo"
-    region: str = "wt-wt"
+    backend: str = "auto"
+    region: str = "us-en"
     safesearch: str = "moderate"
-    max_results: int = 5
-    timeout: int = 10
+    max_results: int = 10
+    timeout: int = 5
+    page: int = 1
+    timelimit: str | None = None
     proxy: str | None = None
 
 
